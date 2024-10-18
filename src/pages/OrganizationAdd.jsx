@@ -1,13 +1,16 @@
 import { ArrowLeftOutlined, EditOutlined, LoadingOutlined, UserAddOutlined } from '@ant-design/icons'
 import { Button, DatePicker, Input } from 'antd'
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import CustomSelect from '../components/CustomSelect'
 import { useAxios } from '../hooks/useAxios'
 import toast from 'react-hot-toast'
+import dayjs from 'dayjs'
 
 function OrganizationAdd() {
+    const dateFormat = 'YYYY-MM-DD';
     const navigate = useNavigate()
+    const {id} = useParams()
     const [isLoading, setIsLoading] = useState(false)
     const statusDate = [
         {
@@ -46,15 +49,15 @@ function OrganizationAdd() {
         },
     ]
 
+
+    const [statusName, setStatusName] = useState(null)
     const [companyName, setCompanyName] = useState(null)
     const [inn, setInn] = useState(null)
     const [statusId, setStatusId] = useState(null)
     const [regionId, setRegionId] = useState(null)
     const [regionName, setRegionName] = useState(null)
     const [address, setAddress] = useState(null)
-    const [createAt, setCreateAt] = useState(null)
-
-
+    const [createdAt, setCreatedAt] = useState(null)
 
     function handleSubmit(e){
         e.preventDefault()
@@ -66,28 +69,61 @@ function OrganizationAdd() {
             regionId:regionId,
             regionPlace: regionName,
             address: address,
-            createdAt:createAt
+            createdAt:createdAt
         }
-       useAxios().post(`/organization`, data).then(res => {
-            
-            toast.success("Tashkilot qo'shildi")
-            setTimeout(() => {
-                setIsLoading(false)
-                navigate(-1)
-            }, 800);
-        })
+        if(id){
+            useAxios().put(`/organization/${id}`, data).then(res => {
+                
+                setTimeout(() => {
+                    toast.success("Tashkilot tahrirlandi")
+                    setIsLoading(false)
+                    navigate(-1)
+                }, 800);
+            })
+        }
+        else{
+            useAxios().post(`/organization`, data).then(res => {
+                setTimeout(() => {
+                    toast.success("Tashkilot qo'shildi")
+                    setIsLoading(false)
+                    navigate(-1)
+                }, 800);
+            })
+        }
         
     }
 
     const handleChangePicker = (date, dateString) => {
-        setCreateAt( dateString);
-      };
+        setCreatedAt( dateString);
+    };
 
+
+    useEffect(() => {
+        if(id){
+            useAxios().get(`/organization/${id}`).then(res => {
+                
+                setCompanyName(res.data.companyName)
+                setInn(res.data.inn)
+                setAddress(res.data.address)
+                setStatusId(res.data.status)
+                setRegionId(res.data.regionId)
+                setRegionName(res.data.regionName)
+                if(res.data.createdAt.includes(".")){
+                    setCreatedAt(res.data.createdAt.split(".").reverse().join("-"))
+                }
+                else{
+                    setCreatedAt(res.data.createdAt)
+
+                }                
+            })
+        }
+    },[])
+    
     return (
         <form onSubmit={handleSubmit} className='p-5 bg-[#F3F4F6] min-h-screen'>
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-5">
-                    <button onClick={() => navigate(-1)} className='scale-[1.3]'><ArrowLeftOutlined/></button>
+                    <button type='button' onClick={() => navigate(-1)} className='scale-[1.3]'><ArrowLeftOutlined/></button>
                     <h2 className='font-bold text-[25px]'>Tashkilotlar Yaratish</h2>
                 </div>
                 <Button htmlType='submit' icon={ isLoading ? <LoadingOutlined/> :<UserAddOutlined/>} size='large'  type='primary' >Saqlash</Button>
@@ -104,10 +140,10 @@ function OrganizationAdd() {
                     </label>
                     <label className='flex flex-col space-y-1'>
                         <span className='text-[16px] text-slate-600'>Holat turini tanlang:</span>
-                        <CustomSelect option={statusDate} placeholder={"Holat turini tanlang"} setChooseId={setStatusId} width={"100%"}/>
+                        <CustomSelect setLebalValue={setStatusName} chooseId={statusId} option={statusDate} placeholder={"Holat turini tanlang"} setChooseId={setStatusId} width={"100%"}/>
                         <label className='flex flex-col space-y-1'>
                         <span className='text-[16px] text-slate-600'>Hudud nomni tanlang:</span>
-                        <CustomSelect setLebalValue={setRegionName} option={regionData} placeholder={"Hudud nomni tanlang"} setChooseId={setRegionId} width={"100%"}/>
+                        <CustomSelect chooseId={regionId} setLebalValue={setRegionName} option={regionData} placeholder={"Hudud nomni tanlang"} setChooseId={setRegionId} width={"100%"}/>
                     </label>
                     </label>
                 </div>
@@ -117,8 +153,8 @@ function OrganizationAdd() {
                         <Input value={address} onChange={(e) => setAddress(e.target.value)} type='text' placeholder='Manzil nomi kiriting' required allowClear size='large' />
                     </label>
                     <label className='flex flex-col space-y-1'>
-                        <span className='text-[16px] text-slate-600'>INN kiriting:</span>
-                        <DatePicker onChange={handleChangePicker} size='large' />
+                        <span className='text-[16px] text-slate-600'>Yaratilgan vaqtni kiriting:</span>
+                        <DatePicker value={createdAt ? dayjs(createdAt, dateFormat) : dayjs()} onChange={handleChangePicker} size='large' />
                     </label>
                    
                 </div>
